@@ -4,6 +4,8 @@ Sistema completo de ingesta, procesamiento y visualización de datos del mercado
 
 **Stack:** Binance WebSocket → Kafka → Spark Structured Streaming → HDFS (Parquet) + Grafana (tiempo real)
 
+![Dashboard de Grafana](assets/dashboard.png)
+
 ## Arquitectura
 
 ```
@@ -177,4 +179,6 @@ La justificación completa de cada decisión se encuentra en [`docs/decisiones_d
 
 ## Autor
 
-Proyecto Final — CryptoExchange v1.0
+Fadoua Hathouti Lahrech
+
+Proyecto Final — CryptoExchange 
