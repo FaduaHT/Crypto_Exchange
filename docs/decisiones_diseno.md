@@ -1,6 +1,5 @@
 # Decisiones de Diseño — CryptoExchange Pipeline
 
-> Documento vivo. Se actualiza en cada fase del proyecto.
 
 ## 1. Arquitectura General
 
