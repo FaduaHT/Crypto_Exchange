@@ -4,7 +4,7 @@ Sistema completo de ingesta, procesamiento y visualización de datos del mercado
 
 **Stack:** Binance WebSocket → Kafka → Spark Structured Streaming → HDFS (Parquet) + Grafana (tiempo real)
 
-![Dashboard de Grafana](assets/dashboard.png)
+![Dashboard de Grafana](assets/dashboard2.png)
 
 ## Arquitectura
 
