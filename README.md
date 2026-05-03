@@ -66,8 +66,10 @@ Sistema completo de ingesta, procesamiento y visualización de datos del mercado
 │   └── provisioning/
 ├── scripts/                    # Scripts de utilidad
 │   └── test_kafka.py
-├── docs/                       # Documentación de decisiones de diseño
+├── docs/                       # Documentación de memoria y decisiones de diseño
+│   └── Memoria_Tecnica_CryptoExchange_FadouaHathouti
 │   └── decisiones_diseno.md
+│   └── Proyecto_Final_CryptoExchange_v1.0.pdf  #enunciado
 └── README.md                   # Este archivo
 ```
 
