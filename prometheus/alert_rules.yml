@@ -1,0 +1,29 @@
+groups:
+  - name: pipeline_alerts
+    rules:
+      - alert: ProducerDown
+        expr: up{job="pipeline-metrics"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "El productor de Binance está caído"
+          description: "El target {{ $labels.instance }} del job {{ $labels.job }} lleva más de 1 minuto sin responder."
+
+      - alert: NoMessagesProcessed
+        expr: rate(pipeline_mensajes_procesados_total[2m]) == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spark no está procesando mensajes"
+          description: "La tasa de procesamiento de mensajes es 0 durante más de 2 minutos."
+
+      - alert: HighPriceVariation
+        expr: crypto_variacion_pct > 5
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Variación de precio anormalmente alta"
+          description: "El par {{ $labels.par }} muestra una variación del {{ $value }}% en la ventana actual."

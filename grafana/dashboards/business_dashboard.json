@@ -1,0 +1,142 @@
+{
+  "id": null,
+  "uid": "business-crypto",
+  "title": "Negocio - Crypto Pipeline",
+  "tags": ["business", "crypto"],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "refresh": "5s",
+  "time": {"from": "now-15m", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "title": "Precio BTC/USDT",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "targets": [
+        {
+          "expr": "crypto_precio_actual{par=\"BTCUSDT\"}",
+          "legendFormat": "BTC/USDT"
+        }
+      ],
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+    },
+    {
+      "id": 2,
+      "title": "Precio ETH/USDT",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "targets": [
+        {
+          "expr": "crypto_precio_actual{par=\"ETHUSDT\"}",
+          "legendFormat": "ETH/USDT"
+        }
+      ],
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+    },
+    {
+      "id": 3,
+      "title": "SMA BTC/USDT",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "targets": [
+        {
+          "expr": "crypto_precio_sma{par=\"BTCUSDT\"}",
+          "legendFormat": "SMA BTC"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+    },
+    {
+      "id": 4,
+      "title": "SMA ETH/USDT",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "targets": [
+        {
+          "expr": "crypto_precio_sma{par=\"ETHUSDT\"}",
+          "legendFormat": "SMA ETH"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+    },
+    {
+      "id": 5,
+      "title": "Variación % BTC/USDT",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "targets": [
+        {
+          "expr": "crypto_variacion_pct{par=\"BTCUSDT\"}",
+          "legendFormat": "Var % BTC"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+    },
+    {
+      "id": 6,
+      "title": "Variación % ETH/USDT",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "targets": [
+        {
+          "expr": "crypto_variacion_pct{par=\"ETHUSDT\"}",
+          "legendFormat": "Var % ETH"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+    },
+    {
+      "id": 7,
+      "title": "Mensajes Enviados (Producer)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "targets": [
+        {
+          "expr": "rate(pipeline_mensajes_enviados_total[1m])",
+          "legendFormat": "{{topic}}"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}
+    },
+    {
+      "id": 8,
+      "title": "Mensajes Procesados (Spark)",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "targets": [
+        {
+          "expr": "rate(pipeline_mensajes_procesados_total[1m])",
+          "legendFormat": "{{par}} - {{topic}}"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20}
+    },
+    {
+      "id": 9,
+      "title": "Batches Procesados (Spark)",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "targets": [
+        {
+          "expr": "spark_batches_procesados_total",
+          "legendFormat": "Batches"
+        }
+      ],
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+    },
+    {
+      "id": 10,
+      "title": "Reconexiones WebSocket",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+      "targets": [
+        {
+          "expr": "websocket_reconexiones_total",
+          "legendFormat": "Reconexiones"
+        }
+      ],
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+    }
+  ]
+}
