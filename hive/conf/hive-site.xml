@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <!-- Metastore embebido (Derby) para entorno local -->
+  <property>
+    <name>javax.jdo.option.ConnectionURL</name>
+    <value>jdbc:derby:;databaseName=/tmp/metastore_db;create=true</value>
+  </property>
+  <property>
+    <name>javax.jdo.option.ConnectionDriverName</name>
+    <value>org.apache.derby.jdbc.EmbeddedDriver</value>
+  </property>
+
+  <!-- Warehouse en HDFS -->
+  <property>
+    <name>hive.metastore.warehouse.dir</name>
+    <value>hdfs://namenode:9000/user/hive/warehouse</value>
+  </property>
+
+  <!-- Thrift Server -->
+  <property>
+    <name>hive.server2.thrift.bind.host</name>
+    <value>0.0.0.0</value>
+  </property>
+  <property>
+    <name>hive.server2.thrift.bind.port</name>
+    <value>10000</value>
+  </property>
+  <property>
+    <name>hive.server2.thrift.http.port</name>
+    <value>10001</value>
+  </property>
+
+  <!-- Formato por defecto -->
+  <property>
+    <name>hive.default.fileformat</name>
+    <value>Parquet</value>
+  </property>
+
+  <!-- Ejecución local -->
+  <property>
+    <name>hive.exec.mode.local.auto</name>
+    <value>true</value>
+  </property>
+
+  <!-- Deshabilitar impersonación para entorno local -->
+  <property>
+    <name>hive.server2.enable.doAs</name>
+    <value>false</value>
+  </property>
+</configuration>
