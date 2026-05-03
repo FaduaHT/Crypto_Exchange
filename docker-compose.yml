@@ -1,0 +1,309 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # 1. ZOOKEEPER & KAFKA
+  # ============================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - crypto-network
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      zookeeper:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "bash", "-c", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_HOST://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    networks:
+      - crypto-network
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  # ============================================
+  # 2. PRODUCER (Binance)
+  # ============================================
+  producer:
+    build:
+      context: ./producer
+      dockerfile: Dockerfile
+    container_name: producer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_TOPIC_MINI_TICKER=miniTicker
+      - KAFKA_TOPIC_KLINE=kline
+      - METRICS_PORT=8000
+      - LOG_LEVEL=INFO
+    ports:
+      - "8000:8000"
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+  # ============================================
+  # 3. SPARK STREAMING JOB
+  # ============================================
+  spark-streaming:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    container_name: spark-streaming
+    depends_on:
+      kafka:
+        condition: service_healthy
+      spark-master:
+        condition: service_healthy
+      namenode:
+        condition: service_healthy
+      datanode:
+        condition: service_started
+    environment:
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_TOPIC_MINI_TICKER=miniTicker
+      - KAFKA_TOPIC_KLINE=kline
+      - HDFS_NAMENODE_URI=hdfs://namenode:9000
+      - HDFS_BASE_PATH=/data/cripto
+      - METRICS_PORT=8001
+    ports:
+      - "8001:8001"
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+  # ============================================
+  # 4. HIVE
+  # ============================================
+  hive:
+    image: apache/hive:4.0.0
+    container_name: hive
+    depends_on:
+      namenode:
+        condition: service_healthy
+      datanode:
+        condition: service_started
+    environment:
+      - HIVE_HOME=/opt/hive
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+    networks:
+      - crypto-network
+    volumes:
+      - ./hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml:ro
+      - ./hive/conf/core-site.xml:/opt/hive/conf/core-site.xml:ro
+      - ./hive/init_tables.hql:/opt/hive/init_tables.hql:ro
+      - ./hive/entrypoint.sh:/opt/hive/entrypoint.sh:ro
+    entrypoint: ["/bin/bash", "/opt/hive/entrypoint.sh"]
+
+  # ============================================
+  # 5. HDFS (Hadoop)
+  # ============================================
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    environment:
+      - CLUSTER_NAME=crypto-hdfs
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - HDFS_CONF_dfs_replication=1
+    ports:
+      - "9870:9870"
+      - "9001:9000"
+    networks:
+      - crypto-network
+    volumes:
+      - namenode_data:/hadoop/dfs/name
+    env_file:
+      - ./hdfs/hadoop.env
+    healthcheck:
+      test: ["CMD", "bash", "-c", "hdfs dfsadmin -report >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    depends_on:
+      - namenode
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - HDFS_CONF_dfs_replication=1
+      - SERVICE_PRECONDITION=namenode:9000
+    ports:
+      - "9864:9864"
+    networks:
+      - crypto-network
+    volumes:
+      - datanode_data:/hadoop/dfs/data
+    env_file:
+      - ./hdfs/hadoop.env
+
+  # ============================================
+  # 3. SPARK
+  # ============================================
+  spark-master:
+    image: apache/spark:3.5.0
+    container_name: spark-master
+    user: root
+    environment:
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
+      - SPARK_MASTER_LOG=/var/log/spark
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+      - "8888:8888"
+    networks:
+      - crypto-network
+    volumes:
+      - ./spark/apps:/opt/spark/apps
+      - spark_data:/tmp/spark
+    command: >
+      bash -c "/opt/spark/sbin/start-master.sh && tail -f /dev/null"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "curl -f http://localhost:8080 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  spark-worker:
+    image: apache/spark:3.5.0
+    container_name: spark-worker
+    user: root
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_PORT=8881
+      - SPARK_WORKER_WEBUI_PORT=8081
+    ports:
+      - "8082:8081"
+    networks:
+      - crypto-network
+    volumes:
+      - ./spark/apps:/opt/spark/apps
+    command: >
+      bash -c "/opt/spark/sbin/start-worker.sh spark://spark-master:7077 && tail -f /dev/null"
+
+  # ============================================
+  # 4. OBSERVABILIDAD
+  # ============================================
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - crypto-network
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  grafana:
+    image: grafana/grafana:10.3.1
+    container_name: grafana
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    networks:
+      - crypto-network
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - crypto-network
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: cadvisor
+    privileged: true
+    ports:
+      - "8081:8080"
+    networks:
+      - crypto-network
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
+  portainer:
+    image: portainer/portainer-ce:2.19.5
+    container_name: portainer
+    ports:
+      - "9000:9000"
+    networks:
+      - crypto-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer_data:/data
+    restart: unless-stopped
+
+networks:
+  crypto-network:
+    driver: bridge
+
+volumes:
+  zookeeper_data:
+  kafka_data:
+  namenode_data:
+  datanode_data:
+  spark_data:
+  prometheus_data:
+  grafana_data:
+  portainer_data:
